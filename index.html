@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MOGRT Gruplama Aracı</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        #loadingBar {
+            position: relative;
+            width: 100%;
+            height: 4px;
+            background-color: transparent;
+            overflow: hidden;
+            border-radius: 9999px;
+        }
+        #loadingBar::before {
+            content: "";
+            position: absolute;
+            background-color: #2563eb;
+            top: 0;
+            bottom: 0;
+            left: -40%;
+            right: 100%;
+            animation: loading-indeterminate 1.5s infinite;
+            border-radius: 9999px;
+        }
+        @keyframes loading-indeterminate {
+            0% {
+                left: -40%;
+                right: 100%;
+            }
+            60% {
+                left: 100%;
+                right: -40%;
+            }
+            100% {
+                left: 100%;
+                right: -40%;
+            }
+        }
+        
+        /* Minimalist buton stili */
+        .download-button {
+            display: block;
+            width: 100%;
+            text-align: center;
+            padding: 0.5rem; /* Daha küçük iç boşluk */
+            margin-top: 0.5rem; /* Daha küçük dış boşluk */
+            color: #4b5563;
+            background-color: #f3f4f6;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 300ms ease;
+        }
+
+        .download-button:hover {
+            color: white;
+            background-color: #2563eb;
+            border-color: #2563eb;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-8 flex items-center justify-center min-h-screen">
+
+    <div class="w-full max-w-lg bg-white rounded-xl shadow-lg p-8 flex flex-col items-center">
+        
+        <div class="w-full flex flex-col items-center mt-8 mb-8">
+            <img src="data:image/png;base64,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" alt="Logo" class="h-16 w-16 object-contain" />
+            <span class="mt-2 text-2xl font-bold tracking-wide text-gray-800 select-none">Studio Mangoo</span>
+        </div>
+        
+        <h2 class="text-xl font-semibold text-gray-700 mb-2">MOGRT Gruplama Aracı</h2>
+        <p class="text-gray-600 mb-6 text-center">MOGRT dosyalarınızı bu alana sürükleyip bırakın veya aşağıya tıklayarak seçin.</p>
+        
+        <div id="dropArea" class="flex items-center justify-center w-full h-40 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+            <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                <p class="mb-2 text-sm text-gray-500 text-center"><span class="font-semibold">Tıklayın veya sürükleyip bırakın</span></p>
+                <p class="text-xs text-gray-500">MOGRT Dosyaları</p>
+            </div>
+            <input type="file" id="fileInput" multiple class="hidden" />
+        </div>
+        
+        <div id="fileMessage" class="mt-4 text-gray-700 text-sm"></div>
+
+        <div class="mt-6 w-full">
+            <button id="processButton" style="display: none;" class="w-full bg-blue-600 text-white font-medium py-3 rounded-lg hover:bg-blue-700 transition-colors">MOGRT Dosyalarını İşle</button>
+        </div>
+
+        <div id="loadingMessage" class="w-full mt-6 hidden">
+            <div id="loadingBar"></div>
+            <p class="mt-2 text-sm text-gray-600">Dosyalar işleniyor, lütfen bekleyin...</p>
+        </div>
+        
+        <div id="downloadLinksContainer" class="w-full mt-6 flex flex-col items-center"></div>
+
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="json-processor.js"></script>
+    <script src="actions.js"></script>
+</body>
+</html>
