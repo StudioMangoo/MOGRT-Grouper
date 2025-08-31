@@ -10,124 +10,130 @@ function generateUUID() {
 function processJson(jsonObject) {
     // Kök seviye güncellemeler
     jsonObject.capsuleID = generateUUID();
-    jsonObject.sourceInfoLocalized.en_US.parentprojectfile = `C:\\Users\\studio.mangoo\\AppData\\Local\\Temp\\aegraphic\\${generateUUID()}\\aemogrtFiles\\`;
+    jsonObject.sourceInfoLocalized.en_US.parentprojectfile = `C:\\aemogrt_temp_path\\${generateUUID()}\\aemogrtFiles\\`;
 
-    // Gruplama için ID'ler ve anahtar kelimeler
-    const globalGroupUiName = "Global Controllers";
-    const sceneGroupUiName = "Scene Controllers";
-    const mediaGroupUiName = "Media";
-    const globalGroupId = generateUUID();
-    const sceneGroupId = generateUUID();
-    const mediaGroupId = generateUUID();
+    const clientControlsMap = new Map();
+    const capParamsMap = new Map();
 
-    // Client Controls ve Capsule Params dizileri için hazırlık
-    let newClientControls = [];
-    let newCapsuleParams = [];
+    // Client Controls ve Capsule Params için dinamik ağaç yapısı oluşturur
+    function buildGroupTree(controls, isCapParam = false) {
+        const root = {};
+        const paramMap = new Map();
 
-    // Gruplama için alt eleman ID'lerini toplayan nesneler
-    const globalControlIds = [];
-    const mediaControlIds = [];
-    
-    // Eski clientControls dizisini işleyerek yeni yapıyı oluşturma
-    jsonObject.clientControls.forEach(control => {
-        if (control.uiName.strDB[0].str.includes("Global Controllers")) {
-            globalControlIds.push(control.id);
-            control.uiName.strDB[0].str = control.uiName.strDB[0].str.replace("Global Controllers | ", "");
-            newClientControls.push(control);
-        } else if (control.uiName.strDB[0].str.includes("Scene Controllers | Media")) {
-            mediaControlIds.push(control.id);
-            control.uiName.strDB[0].str = control.uiName.strDB[0].str.replace("Scene Controllers | Media | ", "");
-            newClientControls.push(control);
-
-            if (control.thumbnail) {
-                control.thumbnail = `${generateUUID()}.png`;
+        controls.forEach(control => {
+            const uiName = isCapParam ? control.capPropUIName : (control.uiName?.strDB?.[0]?.str || '');
+            const parts = uiName.split('|').map(p => p.trim()).filter(p => p.length > 0);
+            
+            if (parts.length === 0) {
+                // Grupsuz kontrolleri doğrudan ekle
+                const id = isCapParam ? control.capPropMatchName : control.id;
+                root[id] = control;
+                return;
             }
-        } else {
-             newClientControls.push(control);
-        }
-    });
 
-    // Gruplama elemanlarını yeni clientControls dizisine ekleme
-    const globalGroup = {
-        "canAnimate": true,
-        "groupexpanded": false,
-        "id": globalGroupId,
-        "type": 10,
-        "uiName": { "strDB": [{"localeString": "en_US", "str": globalGroupUiName}] },
-        "uiSuffix": { "strDB": [{"localeString": "en_US", "str": ""}] },
-        "uiToolTip": { "strDB": [{"localeString": "en_US", "str": ""}] },
-        "value": globalControlIds
-    };
-    const mediaGroup = {
-        "canAnimate": true,
-        "groupexpanded": false,
-        "id": mediaGroupId,
-        "type": 10,
-        "uiName": { "strDB": [{"localeString": "en_US", "str": mediaGroupUiName}] },
-        "uiSuffix": { "strDB": [{"localeString": "en_US", "str": ""}] },
-        "uiToolTip": { "strDB": [{"localeString": "en_US", "str": ""}] },
-        "value": mediaControlIds
-    };
-    const sceneGroup = {
-        "canAnimate": true,
-        "groupexpanded": false,
-        "id": sceneGroupId,
-        "type": 10,
-        "uiName": { "strDB": [{"localeString": "en_US", "str": sceneGroupUiName}] },
-        "uiSuffix": { "strDB": [{"localeString": "en_US", "str": ""}] },
-        "uiToolTip": { "strDB": [{"localeString": "en_US", "str": ""}] },
-        "value": [mediaGroupId]
-    };
-    
-    newClientControls.unshift(globalGroup);
-    newClientControls.splice(newClientControls.findIndex(c => c.id === mediaControlIds[0]), 0, mediaGroup);
-    newClientControls.splice(newClientControls.findIndex(c => c.id === mediaGroupId), 0, sceneGroup);
+            let currentLevel = root;
+            let currentPath = '';
 
-    // Eski capsuleparams dizisini işleyerek yeni yapıyı oluşturma
-    jsonObject.sourceInfoLocalized.en_US.capsuleparams.capParams.forEach(param => {
-        if (param.capPropUIName.includes("Global Controllers")) {
-            param.capPropUIName = param.capPropUIName.replace("Global Controllers | ", "");
-            newCapsuleParams.push(param);
-        } else if (param.capPropUIName.includes("Scene Controllers | Media")) {
-            param.capPropUIName = param.capPropUIName.replace("Scene Controllers | Media | ", "");
-            newCapsuleParams.push(param);
-            if (param.thumbnail) {
-                param.thumbnail = `${generateUUID()}.png`;
+            for (let i = 0; i < parts.length - 1; i++) {
+                const part = parts[i];
+                currentPath += part + '|';
+                const groupName = part;
+
+                if (!currentLevel[groupName]) {
+                    const groupId = paramMap.has(currentPath) ? paramMap.get(currentPath) : generateUUID();
+                    paramMap.set(currentPath, groupId);
+
+                    const groupObj = {
+                        "canAnimate": true,
+                        "groupexpanded": false,
+                        "id": groupId,
+                        "type": 10,
+                        "uiName": { "strDB": [{"localeString": "en_US", "str": groupName}] },
+                        "uiSuffix": { "strDB": [{"localeString": "en_US", "str": ""}] },
+                        "uiToolTip": { "strDB": [{"localeString": "en_US", "str": ""}] },
+                        "value": []
+                    };
+                    const paramObj = {
+                        "capPropAnimatable": false,
+                        "capPropDefault": [],
+                        "capPropGroupExpanded": false,
+                        "capPropMatchName": groupId,
+                        "capPropType": 8,
+                        "capPropUIName": groupName
+                    };
+
+                    currentLevel[groupName] = {
+                        groupObj,
+                        paramObj,
+                        children: {}
+                    };
+                }
+                currentLevel = currentLevel[groupName].children;
             }
-        } else {
-            newCapsuleParams.push(param);
+            
+            const lastPart = parts[parts.length - 1];
+            const finalControlId = isCapParam ? control.capPropMatchName : control.id;
+            
+            if (isCapParam) {
+                if (control.thumbnail) {
+                    control.thumbnail = `${generateUUID()}.png`;
+                }
+                currentLevel[finalControlId] = control;
+            } else {
+                if (control.thumbnail) {
+                    control.thumbnail = `${generateUUID()}.png`;
+                }
+                control.uiName.strDB[0].str = lastPart;
+                currentLevel[finalControlId] = control;
+            }
+        });
+        return { root, paramMap };
+    }
+
+    // Ağaç yapısını düz bir diziye dönüştürür ve UUID'leri günceller
+    function flattenTree(tree, flatArray = [], paramValue = []) {
+        for (const key in tree) {
+            const node = tree[key];
+            if (node.groupObj) {
+                // Bu bir grup
+                flatArray.push(node.groupObj);
+                paramValue.push(node.groupObj.id);
+                // Alt elemanları ekle
+                flattenTree(node.children, flatArray, node.groupObj.value);
+            } else {
+                // Bu bir kontrol
+                flatArray.push(node);
+                paramValue.push(node.id);
+            }
         }
-    });
+        return flatArray;
+    }
 
-    // Gruplama elemanlarını yeni capsuleparams dizisine ekleme
-    const newGlobalGroupParam = {
-        "capPropAnimatable": false,
-        "capPropDefault": globalControlIds,
-        "capPropGroupExpanded": false,
-        "capPropMatchName": globalGroupId,
-        "capPropType": 8,
-        "capPropUIName": globalGroupUiName
-    };
-    const newMediaGroupParam = {
-        "capPropAnimatable": false,
-        "capPropDefault": mediaControlIds,
-        "capPropGroupExpanded": false,
-        "capPropMatchName": mediaGroupId,
-        "capPropType": 8,
-        "capPropUIName": mediaGroupUiName
-    };
-    const newSceneGroupParam = {
-        "capPropAnimatable": false,
-        "capPropDefault": [mediaGroupId],
-        "capPropGroupExpanded": false,
-        "capPropMatchName": sceneGroupId,
-        "capPropType": 8,
-        "capPropUIName": sceneGroupUiName
-    };
+    // Aynı işlemi capsuleparams için de yap
+    function flattenParamTree(tree, flatArray = [], paramValue = []) {
+        for (const key in tree) {
+            const node = tree[key];
+            if (node.paramObj) {
+                // Bu bir grup
+                flatArray.push(node.paramObj);
+                paramValue.push(node.paramObj.capPropMatchName);
+                // Alt elemanları ekle
+                flattenParamTree(node.children, flatArray, node.paramObj.capPropDefault);
+            } else {
+                // Bu bir kontrol
+                flatArray.push(node);
+                paramValue.push(node.capPropMatchName);
+            }
+        }
+        return flatArray;
+    }
 
-    newCapsuleParams.unshift(newGlobalGroupParam);
-    newCapsuleParams.splice(newCapsuleParams.findIndex(p => p.capPropMatchName === mediaControlIds[0]), 0, newMediaGroupParam);
-    newCapsuleParams.splice(newCapsuleParams.findIndex(p => p.capPropMatchName === mediaGroupId), 0, newSceneGroupParam);
+    // Ana işlem
+    const clientTree = buildGroupTree(jsonObject.clientControls);
+    const paramTree = buildGroupTree(jsonObject.sourceInfoLocalized.en_US.capsuleparams.capParams, true);
+
+    const newClientControls = flattenTree(clientTree.root);
+    const newCapsuleParams = flattenParamTree(paramTree.root);
 
     // Güncellenmiş dizileri orijinal nesneye geri atama
     jsonObject.clientControls = newClientControls;
